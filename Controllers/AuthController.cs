@@ -71,6 +71,35 @@ public class AuthController : ControllerBase
         return Ok(new { user.Email, Role = roles.FirstOrDefault() ?? "Customer" });
     }
 
+    [Authorize]
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateProfile(UpdateProfileRequest request)
+    {
+        var user = await _userManager.FindByIdAsync(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        if (user is null) return Unauthorized();
+
+        if (!string.IsNullOrWhiteSpace(request.Email) && request.Email != user.Email)
+        {
+            user.UserName = request.Email;
+            user.Email = request.Email;
+            var emailResult = await _userManager.UpdateAsync(user);
+            if (!emailResult.Succeeded)
+                return BadRequest(emailResult.Errors.Select(e => e.Description));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.NewPassword))
+        {
+            if (string.IsNullOrWhiteSpace(request.CurrentPassword))
+                return BadRequest("CurrentPassword is required to set a new password.");
+
+            var passwordResult = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+            if (!passwordResult.Succeeded)
+                return BadRequest(passwordResult.Errors.Select(e => e.Description));
+        }
+
+        return NoContent();
+    }
+
     private string GenerateJwt(IdentityUser user, IList<string> roles)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));

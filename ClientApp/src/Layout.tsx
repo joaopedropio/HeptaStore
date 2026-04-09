@@ -39,7 +39,19 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
       </nav>
       <div className="px-4 pt-4 border-t border-white/10 mt-auto">
         <p className="text-xs text-gray-400 truncate mb-0.5">{user?.email}</p>
-        <p className="text-xs text-indigo-400 font-medium mb-3">{user?.role}</p>
+        <p className="text-xs text-indigo-400 font-medium mb-2">{user?.role}</p>
+        <NavLink
+          to="/profile/edit"
+          className={({ isActive }) =>
+            `block text-center w-full px-3 py-1.5 rounded-md text-xs font-semibold mb-2 transition-colors no-underline ${
+              isActive
+                ? 'bg-white/[0.12] text-white'
+                : 'bg-white/[0.05] text-gray-400 hover:bg-white/[0.10] hover:text-white'
+            }`
+          }
+        >
+          Edit Profile
+        </NavLink>
         <button
           onClick={handleLogout}
           disabled={logout.isPending}

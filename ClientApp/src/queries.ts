@@ -63,6 +63,29 @@ export function useRegister() {
   })
 }
 
+export function useUpdateProfile() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: { email?: string; currentPassword?: string; newPassword?: string }) => {
+      const res = await fetch('/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const body = await res.text()
+        let message = 'Update failed.'
+        try {
+          const errors: string[] = JSON.parse(body)
+          message = errors.join(' ')
+        } catch { /* use default */ }
+        throw new Error(message)
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['me'] }),
+  })
+}
+
 export function useLogout() {
   const qc = useQueryClient()
   return useMutation({

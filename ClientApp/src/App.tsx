@@ -6,6 +6,7 @@ import Layout from './Layout'
 import ProductList from './ProductList'
 import AddProduct from './AddProduct'
 import EditProduct from './EditProduct'
+import EditProfile from './EditProfile'
 import SignIn from './SignIn'
 import SignUp from './SignUp'
 
@@ -24,6 +25,7 @@ export default function App() {
                 <Route index element={<ProductList />} />
                 <Route path="/products/new" element={<AddProduct />} />
                 <Route path="/products/:id/edit" element={<EditProduct />} />
+                <Route path="/profile/edit" element={<EditProfile />} />
               </Route>
             </Route>
           </Routes>
