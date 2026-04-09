@@ -13,7 +13,6 @@ public class ProductsControllerIntegrationTests : IAsyncLifetime
 {
     private static readonly Guid SeededId = Guid.Parse("d5da0756-fa5f-49c8-b2a3-dbd56150e601");
 
-    private readonly string _dbName = $"HeptaStore_Test_{Guid.NewGuid():N}";
     private readonly string _connectionString;
     private WebApplicationFactory<Program> _factory = null!;
 
