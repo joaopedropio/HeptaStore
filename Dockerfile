@@ -1,4 +1,10 @@
-# See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
+# Build React frontend
+FROM node:22-alpine AS frontend
+WORKDIR /clientapp
+COPY ClientApp/package*.json ./
+RUN npm ci
+COPY ClientApp/ ./
+RUN npm run build
 
 # This stage is used when running from VS in fast mode (Default for Debug configuration)
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
@@ -6,7 +12,6 @@ USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
-
 
 # This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
@@ -28,6 +33,7 @@ FROM base AS final
 USER root
 WORKDIR /app
 COPY --from=publish /app/publish .
+COPY --from=frontend /wwwroot ./wwwroot
 RUN mkdir -p /app/uploads && chown $APP_UID /app/uploads
 USER $APP_UID
 ENTRYPOINT ["dotnet", "HeptaStore.dll"]

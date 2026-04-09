@@ -32,7 +32,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.MapControllers();
+app.MapFallbackToFile("index.html");
 
 using (var scope = app.Services.CreateScope())
     scope.ServiceProvider.GetRequiredService<StoreDbContext>().Database.Migrate();
