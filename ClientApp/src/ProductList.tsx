@@ -4,6 +4,7 @@ import * as AlertDialog from '@radix-ui/react-alert-dialog'
 import { useProducts, useDeleteProduct, type Product } from './queries'
 import { useProductListStore } from './store'
 import { useAuth } from './AuthContext'
+import { Button } from './ui'
 
 type SortKey = 'price' | 'createdAt'
 type SortDir = 'asc' | 'desc'
@@ -14,12 +15,7 @@ function ActionsMenu({ id, onDeleteRequest }: { id: string; onDeleteRequest: (id
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
-        <button
-          className="bg-transparent border-none cursor-pointer text-lg text-gray-400 px-1 py-0.5 rounded leading-none tracking-wide transition-colors hover:bg-gray-100 hover:text-gray-700 focus:outline-none"
-          aria-label="Actions"
-        >
-          ···
-        </button>
+        <Button variant="ghost" aria-label="Actions">···</Button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content
@@ -86,12 +82,7 @@ export default function ProductList() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-semibold m-0">Products</h1>
           {isManager && (
-            <button
-              className="px-4 py-2 bg-indigo-500 text-white border-none rounded-md text-sm font-semibold cursor-pointer transition-colors hover:bg-indigo-600"
-              onClick={() => navigate('/products/new')}
-            >
-              + Add Product
-            </button>
+            <Button onClick={() => navigate('/products/new')}>+ Add Product</Button>
           )}
         </div>
         {sorted.length === 0 ? (
@@ -158,18 +149,12 @@ export default function ProductList() {
             </AlertDialog.Description>
             <div className="flex justify-end gap-3">
               <AlertDialog.Cancel asChild>
-                <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md text-sm font-semibold cursor-pointer transition-colors hover:bg-gray-300">
-                  Cancel
-                </button>
+                <Button variant="secondary">Cancel</Button>
               </AlertDialog.Cancel>
               <AlertDialog.Action asChild>
-                <button
-                  className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-semibold cursor-pointer transition-colors hover:bg-red-700 disabled:opacity-55 disabled:cursor-not-allowed"
-                  onClick={confirmDelete}
-                  disabled={deleteProduct.isPending}
-                >
+                <Button variant="destructive" onClick={confirmDelete} disabled={deleteProduct.isPending}>
                   {deleteProduct.isPending ? 'Deleting…' : 'Delete'}
-                </button>
+                </Button>
               </AlertDialog.Action>
             </div>
           </AlertDialog.Content>
