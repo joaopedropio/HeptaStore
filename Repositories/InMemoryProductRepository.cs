@@ -38,6 +38,16 @@ public class InMemoryProductRepository : IProductRepository
         return product;
     }
 
+    public Product? UpdateImagePath(Guid id, string imagePath)
+    {
+        var product = _products.FirstOrDefault(p => p.Id == id);
+        if (product is null) return null;
+
+        product.ImagePath = imagePath;
+        product.UpdatedAt = DateTime.UtcNow;
+        return product;
+    }
+
     public bool Delete(Guid id)
     {
         var product = _products.FirstOrDefault(p => p.Id == id);

@@ -1,8 +1,11 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using HeptaStore.Data;
 using HeptaStore.DTOs;
 using HeptaStore.Models;
+using HeptaStore.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,6 +37,12 @@ public class ProductsControllerIntegrationTests : IAsyncLifetime
 
                     services.AddDbContext<StoreDbContext>(options =>
                         options.UseSqlServer(_connectionString));
+
+                    var fileStorageDescriptor = services.SingleOrDefault(d =>
+                        d.ServiceType == typeof(IFileStorageService));
+                    if (fileStorageDescriptor != null) services.Remove(fileStorageDescriptor);
+
+                    services.AddScoped<IFileStorageService, FakeFileStorageService>();
                 });
             });
 
@@ -219,4 +228,95 @@ public class ProductsControllerIntegrationTests : IAsyncLifetime
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task UploadImage_WithValidProductAndImage_ReturnsOkWithImagePath()
+    {
+        var client = CreateClient(FreshProducts());
+
+        var content = new MultipartFormDataContent();
+        content.Add(new StringContent(SeededId.ToString()), "productId");
+        var imageContent = new ByteArrayContent([0xFF, 0xD8, 0xFF, 0xE0]);
+        imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        content.Add(imageContent, "image", "product.jpg");
+
+        var response = await client.PostAsync("/products/upload", content);
+        var product = await response.Content.ReadFromJsonAsync<Product>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(product!.ImagePath);
+        Assert.EndsWith(".jpg", product.ImagePath);
+    }
+
+    [Fact]
+    public async Task UploadImage_WithNonExistentProduct_ReturnsNotFound()
+    {
+        var client = CreateClient([]);
+
+        var content = new MultipartFormDataContent();
+        content.Add(new StringContent(Guid.NewGuid().ToString()), "productId");
+        var imageContent = new ByteArrayContent([0xFF, 0xD8, 0xFF, 0xE0]);
+        imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        content.Add(imageContent, "image", "product.jpg");
+
+        var response = await client.PostAsync("/products/upload", content);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UploadImage_WithNoImageFile_ReturnsBadRequest()
+    {
+        var client = CreateClient(FreshProducts());
+
+        var content = new MultipartFormDataContent();
+        content.Add(new StringContent(SeededId.ToString()), "productId");
+
+        var response = await client.PostAsync("/products/upload", content);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DownloadImage_WhenProductHasImage_ReturnsOkWithImageContent()
+    {
+        var products = new List<Product>
+        {
+            new Product { Id = SeededId, Name = "Sample Product", Description = "A test product", Price = 9.99m, ImagePath = "bike.png" }
+        };
+        var client = CreateClient(products);
+
+        var response = await client.GetAsync($"/products/{SeededId}/image");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("image/png", response.Content.Headers.ContentType!.MediaType);
+    }
+
+    [Fact]
+    public async Task DownloadImage_WhenProductHasNoImage_ReturnsNotFound()
+    {
+        var client = CreateClient(FreshProducts());
+
+        var response = await client.GetAsync($"/products/{SeededId}/image");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DownloadImage_WhenProductDoesNotExist_ReturnsNotFound()
+    {
+        var client = CreateClient([]);
+
+        var response = await client.GetAsync($"/products/{Guid.NewGuid()}/image");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+}
+
+file class FakeFileStorageService : IFileStorageService
+{
+    public Task<string> SaveAsync(IFormFile file) =>
+        Task.FromResult($"{Guid.NewGuid()}.jpg");
+
+    public Stream Download(string imagePath) => new MemoryStream([0xFF, 0xD8, 0xFF, 0xE0]);
 }

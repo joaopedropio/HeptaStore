@@ -2,6 +2,8 @@ using HeptaStore.Controllers;
 using HeptaStore.DTOs;
 using HeptaStore.Models;
 using HeptaStore.Repositories;
+using HeptaStore.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 
@@ -10,12 +12,14 @@ namespace HeptaStore.Tests.Controllers;
 public class ProductsControllerTests
 {
     private readonly Mock<IProductRepository> _repositoryMock;
+    private readonly Mock<IFileStorageService> _fileStorageMock;
     private readonly ProductsController _controller;
 
     public ProductsControllerTests()
     {
         _repositoryMock = new Mock<IProductRepository>();
-        _controller = new ProductsController(_repositoryMock.Object);
+        _fileStorageMock = new Mock<IFileStorageService>();
+        _controller = new ProductsController(_repositoryMock.Object, _fileStorageMock.Object);
     }
 
     [Fact]
@@ -131,6 +135,112 @@ public class ProductsControllerTests
         _repositoryMock.Setup(r => r.Delete(It.IsAny<Guid>())).Returns(false);
 
         var result = _controller.Delete(Guid.NewGuid());
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task UploadImage_WhenProductExists_ReturnsOkWithUpdatedProduct()
+    {
+        var product = new Product { Name = "Product A", Description = "Desc A", Price = 10m };
+        var imagePath = "abc.jpg";
+        var updatedProduct = new Product { Id = product.Id, Name = product.Name, Description = product.Description, Price = product.Price, ImagePath = imagePath };
+
+        var fileMock = new Mock<IFormFile>();
+        fileMock.Setup(f => f.Length).Returns(100);
+        fileMock.Setup(f => f.FileName).Returns("abc.jpg");
+
+        _repositoryMock.Setup(r => r.GetById(product.Id)).Returns(product);
+        _fileStorageMock.Setup(s => s.SaveAsync(fileMock.Object)).ReturnsAsync(imagePath);
+        _repositoryMock.Setup(r => r.UpdateImagePath(product.Id, imagePath)).Returns(updatedProduct);
+
+        var request = new UploadProductImageRequest { ProductId = product.Id, Image = fileMock.Object };
+        var result = await _controller.UploadImage(request);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var value = Assert.IsType<Product>(ok.Value);
+        Assert.Equal(imagePath, value.ImagePath);
+    }
+
+    [Fact]
+    public async Task UploadImage_WhenProductDoesNotExist_ReturnsNotFound()
+    {
+        var fileMock = new Mock<IFormFile>();
+        fileMock.Setup(f => f.Length).Returns(100);
+        fileMock.Setup(f => f.FileName).Returns("photo.png");
+
+        _repositoryMock.Setup(r => r.GetById(It.IsAny<Guid>())).Returns((Product?)null);
+
+        var request = new UploadProductImageRequest { ProductId = Guid.NewGuid(), Image = fileMock.Object };
+        var result = await _controller.UploadImage(request);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task UploadImage_WhenImageIsEmpty_ReturnsBadRequest()
+    {
+        var fileMock = new Mock<IFormFile>();
+        fileMock.Setup(f => f.Length).Returns(0);
+
+        var request = new UploadProductImageRequest { ProductId = Guid.NewGuid(), Image = fileMock.Object };
+        var result = await _controller.UploadImage(request);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task UploadImage_WhenImageHasInvalidExtension_ReturnsBadRequest()
+    {
+        var fileMock = new Mock<IFormFile>();
+        fileMock.Setup(f => f.Length).Returns(100);
+        fileMock.Setup(f => f.FileName).Returns("file.gif");
+
+        var request = new UploadProductImageRequest { ProductId = Guid.NewGuid(), Image = fileMock.Object };
+        var result = await _controller.UploadImage(request);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task UploadImage_WhenImageIsNull_ReturnsBadRequest()
+    {
+        var request = new UploadProductImageRequest { ProductId = Guid.NewGuid(), Image = null! };
+        var result = await _controller.UploadImage(request);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public void DownloadImage_WhenProductHasImage_ReturnsFileResult()
+    {
+        var product = new Product { Name = "A", Description = "B", Price = 1m, ImagePath = "abc.png" };
+        _repositoryMock.Setup(r => r.GetById(product.Id)).Returns(product);
+        _fileStorageMock.Setup(s => s.Download(product.ImagePath)).Returns(new MemoryStream([0x01]));
+
+        var result = _controller.DownloadImage(product.Id);
+
+        var file = Assert.IsType<FileStreamResult>(result);
+        Assert.Equal("image/png", file.ContentType);
+    }
+
+    [Fact]
+    public void DownloadImage_WhenProductDoesNotExist_ReturnsNotFound()
+    {
+        _repositoryMock.Setup(r => r.GetById(It.IsAny<Guid>())).Returns((Product?)null);
+
+        var result = _controller.DownloadImage(Guid.NewGuid());
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public void DownloadImage_WhenProductHasNoImage_ReturnsNotFound()
+    {
+        var product = new Product { Name = "A", Description = "B", Price = 1m, ImagePath = null };
+        _repositoryMock.Setup(r => r.GetById(product.Id)).Returns(product);
+
+        var result = _controller.DownloadImage(product.Id);
 
         Assert.IsType<NotFoundResult>(result);
     }

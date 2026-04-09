@@ -8,5 +8,6 @@ public interface IProductRepository
     IEnumerable<Product> GetAll();
     Product? GetById(Guid id);
     Product? Update(Guid id, string name, string description, decimal price);
+    Product? UpdateImagePath(Guid id, string imagePath);
     bool Delete(Guid id);
 }

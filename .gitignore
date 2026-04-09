@@ -6,6 +6,10 @@
 # dotenv files
 .env
 
+# Uploaded files
+uploads/*
+!uploads/.gitkeep
+
 # User-specific files
 *.rsuser
 *.suo

@@ -41,6 +41,19 @@ public class ProductRepository(StoreDbContext db) : IProductRepository
         return product;
     }
 
+    public Product? UpdateImagePath(Guid id, string imagePath)
+    {
+        var product = db.Products.Find(id);
+        if (product is null) return null;
+
+        product.ImagePath = imagePath;
+        product.UpdatedAt = DateTime.UtcNow;
+
+        db.SaveChanges();
+
+        return product;
+    }
+
     public bool Delete(Guid id)
     {
         var product = db.Products.Find(id);

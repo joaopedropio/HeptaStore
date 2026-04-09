@@ -1,5 +1,7 @@
 using HeptaStore.Data;
 using HeptaStore.Repositories;
+using HeptaStore.Services;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,6 +12,12 @@ builder.Services.AddDbContext<StoreDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartHeadersLengthLimit = 16 * 1024 * 1024; // 16 MB
+    options.MultipartBodyLengthLimit = 16 * 1024 * 1024;    // 16 MB
+});
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
