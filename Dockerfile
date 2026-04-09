@@ -25,6 +25,9 @@ RUN dotnet publish "./HeptaStore.csproj" -c $BUILD_CONFIGURATION -o /app/publish
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
+USER root
 WORKDIR /app
 COPY --from=publish /app/publish .
+RUN mkdir -p /app/uploads && chown $APP_UID /app/uploads
+USER $APP_UID
 ENTRYPOINT ["dotnet", "HeptaStore.dll"]

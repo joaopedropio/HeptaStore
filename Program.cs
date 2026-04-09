@@ -34,6 +34,9 @@ app.UseHttpsRedirection();
 
 app.MapControllers();
 
+using (var scope = app.Services.CreateScope())
+    scope.ServiceProvider.GetRequiredService<StoreDbContext>().Database.Migrate();
+
 app.Run();
 
 public partial class Program { }
