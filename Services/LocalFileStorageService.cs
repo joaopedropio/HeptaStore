@@ -34,4 +34,11 @@ public class LocalFileStorageService(IWebHostEnvironment env, IConfiguration con
         var fullPath = Path.Combine(StoragePath, imagePath);
         return File.OpenRead(fullPath);
     }
+
+    public void Delete(string imagePath)
+    {
+        var fullPath = Path.Combine(StoragePath, imagePath);
+        if (File.Exists(fullPath))
+            File.Delete(fullPath);
+    }
 }

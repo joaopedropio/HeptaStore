@@ -1,5 +1,78 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+export interface AuthUser {
+  email: string
+  role: 'Manager' | 'Customer'
+}
+
+export function useMe() {
+  return useQuery({
+    queryKey: ['me'],
+    queryFn: async (): Promise<AuthUser | null> => {
+      const res = await fetch('/auth/me')
+      if (res.status === 401) return null
+      if (!res.ok) throw new Error(`Failed: ${res.status}`)
+      return res.json()
+    },
+    retry: false,
+    staleTime: Infinity,
+  })
+}
+
+export function useLogin() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: { email: string; password: string }) => {
+      const res = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error('Invalid credentials.')
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['me'] }),
+  })
+}
+
+export function useRegister() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: { email: string; password: string; isManager: boolean }) => {
+      const res = await fetch('/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const body = await res.text()
+        let message = 'Registration failed.'
+        try {
+          const errors: string[] = JSON.parse(body)
+          message = errors.join(' ')
+        } catch { /* use default message */ }
+        throw new Error(message)
+      }
+      const loginRes = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: payload.email, password: payload.password }),
+      })
+      if (!loginRes.ok) throw new Error('Registered but login failed.')
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['me'] }),
+  })
+}
+
+export function useLogout() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      await fetch('/auth/logout', { method: 'POST' })
+    },
+    onSuccess: () => qc.setQueryData(['me'], null),
+  })
+}
+
 export interface Product {
   id: string
   name: string

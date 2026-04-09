@@ -319,4 +319,6 @@ file class FakeFileStorageService : IFileStorageService
         Task.FromResult($"{Guid.NewGuid()}.jpg");
 
     public Stream Download(string imagePath) => new MemoryStream([0xFF, 0xD8, 0xFF, 0xE0]);
+
+    public void Delete(string imagePath) { }
 }

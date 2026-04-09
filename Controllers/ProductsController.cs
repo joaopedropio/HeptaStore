@@ -2,11 +2,13 @@ using HeptaStore.DTOs;
 using HeptaStore.Models;
 using HeptaStore.Repositories;
 using HeptaStore.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 
 namespace HeptaStore.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("[controller]")]
 public class ProductsController : ControllerBase
@@ -21,6 +23,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Manager")]
     public IActionResult Create(CreateProductRequest request)
     {
         var product = _repository.Create(request.Name, request.Description, request.Price);
@@ -38,6 +41,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [Authorize(Roles = "Manager")]
     public IActionResult Update(Guid id, UpdateProductRequest request)
     {
         var product = _repository.Update(id, request.Name, request.Description, request.Price);
@@ -45,6 +49,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPost("upload")]
+    [Authorize(Roles = "Manager")]
     public async Task<IActionResult> UploadImage([FromForm] UploadProductImageRequest request)
     {
         if (request.Image is null || request.Image.Length == 0)
@@ -57,8 +62,12 @@ public class ProductsController : ControllerBase
         var product = _repository.GetById(request.ProductId);
         if (product is null) return NotFound();
 
+        var oldImagePath = product.ImagePath;
         var imagePath = await _fileStorage.SaveAsync(request.Image);
         var updated = _repository.UpdateImagePath(request.ProductId, imagePath);
+
+        if (oldImagePath is not null)
+            _fileStorage.Delete(oldImagePath);
 
         return Ok(updated);
     }
@@ -77,8 +86,16 @@ public class ProductsController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Roles = "Manager")]
     public IActionResult Delete(Guid id)
     {
-        return _repository.Delete(id) ? NoContent() : NotFound();
+        var product = _repository.GetById(id);
+        if (product is null) return NotFound();
+
+        if (product.ImagePath is not null)
+            _fileStorage.Delete(product.ImagePath);
+
+        _repository.Delete(id);
+        return NoContent();
     }
 }

@@ -3,6 +3,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import * as AlertDialog from '@radix-ui/react-alert-dialog'
 import { useProducts, useDeleteProduct, type Product } from './queries'
 import { useProductListStore } from './store'
+import { useAuth } from './AuthContext'
 
 type SortKey = 'price' | 'createdAt'
 type SortDir = 'asc' | 'desc'
@@ -62,6 +63,8 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
 
 export default function ProductList() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const isManager = user?.role === 'Manager'
   const { data: products = [], isLoading, error } = useProducts()
   const deleteProduct = useDeleteProduct()
   const { sortKey, sortDir, deleteId, handleSort, setDeleteId } = useProductListStore()
@@ -82,12 +85,14 @@ export default function ProductList() {
       <div className="max-w-4xl">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-semibold m-0">Products</h1>
-          <button
-            className="px-4 py-2 bg-indigo-500 text-white border-none rounded-md text-sm font-semibold cursor-pointer transition-colors hover:bg-indigo-600"
-            onClick={() => navigate('/products/new')}
-          >
-            + Add Product
-          </button>
+          {isManager && (
+            <button
+              className="px-4 py-2 bg-indigo-500 text-white border-none rounded-md text-sm font-semibold cursor-pointer transition-colors hover:bg-indigo-600"
+              onClick={() => navigate('/products/new')}
+            >
+              + Add Product
+            </button>
+          )}
         </div>
         {sorted.length === 0 ? (
           <p className="p-8 text-center text-gray-500">No products found.</p>
@@ -111,7 +116,7 @@ export default function ProductList() {
                   >
                     Created <SortIcon active={sortKey === 'createdAt'} dir={sortDir} />
                   </th>
-                  <th className="px-4 py-3 border-b border-gray-200"></th>
+                  {isManager && <th className="px-4 py-3 border-b border-gray-200"></th>}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -128,9 +133,11 @@ export default function ProductList() {
                     <td className="px-4 py-3 align-middle">{p.description}</td>
                     <td className="px-4 py-3 align-middle">${p.price.toFixed(2)}</td>
                     <td className="px-4 py-3 align-middle">{new Date(p.createdAt).toLocaleDateString()}</td>
-                    <td className="px-4 py-3 align-middle w-10 text-right">
-                      <ActionsMenu id={p.id} onDeleteRequest={setDeleteId} />
-                    </td>
+                    {isManager && (
+                      <td className="px-4 py-3 align-middle w-10 text-right">
+                        <ActionsMenu id={p.id} onDeleteRequest={setDeleteId} />
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
