@@ -1,28 +1,70 @@
 using System.Net;
 using System.Net.Http.Json;
+using HeptaStore.Data;
 using HeptaStore.DTOs;
 using HeptaStore.Models;
-using HeptaStore.Repositories;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace HeptaStore.Tests.Controllers;
 
-public class ProductsControllerIntegrationTests
+public class ProductsControllerIntegrationTests : IAsyncLifetime
 {
     private static readonly Guid SeededId = Guid.Parse("d5da0756-fa5f-49c8-b2a3-dbd56150e601");
 
-    private HttpClient CreateClient(List<Product>? products = null)
+    private readonly string _dbName = $"HeptaStore_Test_{Guid.NewGuid():N}";
+    private readonly string _connectionString;
+    private WebApplicationFactory<Program> _factory = null!;
+
+    public ProductsControllerIntegrationTests()
     {
-        return new WebApplicationFactory<Program>()
+        _connectionString = $"Server=localhost,1433;Database=HeptaStore_Test_{Guid.NewGuid():N};User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;";
+    }
+
+    public async Task InitializeAsync()
+    {
+        _factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
                 builder.ConfigureServices(services =>
                 {
-                    services.AddScoped<IProductRepository>(_ => new InMemoryProductRepository(products));
+                    var descriptor = services.SingleOrDefault(d =>
+                        d.ServiceType == typeof(DbContextOptions<StoreDbContext>));
+                    if (descriptor != null) services.Remove(descriptor);
+
+                    services.AddDbContext<StoreDbContext>(options =>
+                        options.UseSqlServer(_connectionString));
                 });
-            })
-            .CreateClient();
+            });
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<StoreDbContext>();
+        await db.Database.MigrateAsync();
+    }
+
+    public async Task DisposeAsync()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<StoreDbContext>();
+        await db.Database.EnsureDeletedAsync();
+        await _factory.DisposeAsync();
+    }
+
+    private HttpClient CreateClient(List<Product>? products = null)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<StoreDbContext>();
+        db.Products.RemoveRange(db.Products);
+        db.SaveChanges();
+
+        if (products?.Count > 0)
+        {
+            db.Products.AddRange(products);
+            db.SaveChanges();
+        }
+
+        return _factory.CreateClient();
     }
 
     public static List<Product> FreshProducts() =>
