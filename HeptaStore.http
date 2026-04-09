@@ -1,6 +1,54 @@
 @HeptaStore_HostAddress = http://localhost:5229
 
+# Create a new product
+POST {{HeptaStore_HostAddress}}/products
+Content-Type: application/json
+
+{
+  "name": "New Product",
+  "description": "A new product",
+  "price": 29.99
+}
+
+###
+
+# List all products
 GET {{HeptaStore_HostAddress}}/products
 Accept: application/json
+
+###
+
+# Get a product by ID (existing)
+GET {{HeptaStore_HostAddress}}/products/d5da0756-fa5f-49c8-b2a3-dbd56150e601
+Accept: application/json
+
+###
+
+# Get a product by ID (not found)
+GET {{HeptaStore_HostAddress}}/products/d5da0756-fa5f-49c8-b2a3-dbd56150e602
+Accept: application/json
+
+###
+
+# Get a product by ID (invalid UUID - expects 400)
+GET {{HeptaStore_HostAddress}}/products/d5da0756-fa5f-49c8-b2a3-dbd5615
+Accept: application/json
+
+###
+
+# Update a product by ID
+PUT {{HeptaStore_HostAddress}}/products/d5da0756-fa5f-49c8-b2a3-dbd56150e601
+Content-Type: application/json
+
+{
+  "name": "Updated Product",
+  "description": "Updated description",
+  "price": 19.99
+}
+
+###
+
+# Delete a product by ID
+DELETE {{HeptaStore_HostAddress}}/products/d5da0756-fa5f-49c8-b2a3-dbd56150e601
 
 ###
