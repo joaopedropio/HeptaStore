@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import * as RadixLabel from '@radix-ui/react-label'
 
 // --- Button ---
@@ -42,6 +43,36 @@ export function Field({ label, htmlFor, children }: { label: string; htmlFor: st
         {label}
       </RadixLabel.Root>
       {children}
+    </div>
+  )
+}
+
+// --- ImagePicker ---
+
+export function ImagePicker({
+  id,
+  accept,
+  fileName,
+  onChange,
+}: {
+  id: string
+  accept: string
+  fileName: string | null
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+}) {
+  const ref = useRef<HTMLInputElement>(null)
+
+  return (
+    <div className="flex items-center gap-3">
+      <input ref={ref} id={id} type="file" accept={accept} onChange={onChange} className="hidden" />
+      <button
+        type="button"
+        onClick={() => ref.current?.click()}
+        className="px-3 py-1.5 rounded-md border border-gray-300 bg-gray-50 text-sm text-gray-700 font-medium cursor-pointer transition-colors hover:bg-gray-100 hover:border-gray-400"
+      >
+        Choose image
+      </button>
+      <span className="text-sm text-gray-400 truncate">{fileName ?? 'No file chosen'}</span>
     </div>
   )
 }

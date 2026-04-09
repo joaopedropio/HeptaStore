@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import * as AlertDialog from '@radix-ui/react-alert-dialog'
@@ -49,11 +50,113 @@ function sortProducts(products: Product[], key: SortKey, dir: SortDir) {
   })
 }
 
-function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
+function SortButton({ label, active, dir, onClick }: { label: string; active: boolean; dir: SortDir; onClick: () => void }) {
   return (
-    <span className={`ml-1 ${active ? 'opacity-100 text-indigo-500' : 'opacity-30'}`}>
-      {active && dir === 'asc' ? '↑' : '↓'}
-    </span>
+    <button
+      onClick={onClick}
+      className={`px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer transition-colors border ${
+        active
+          ? 'bg-indigo-500 text-white border-indigo-500'
+          : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:text-gray-800'
+      }`}
+    >
+      {label} {active ? (dir === 'asc' ? '↑' : '↓') : ''}
+    </button>
+  )
+}
+
+function ProductCard({ p, isManager, onDeleteRequest, onClick }: {
+  p: Product
+  isManager: boolean
+  onDeleteRequest: (id: string) => void
+  onClick: () => void
+}) {
+  return (
+    <div
+      className="bg-white rounded-xl shadow-sm overflow-hidden flex flex-col group cursor-pointer"
+      onClick={onClick}
+    >
+      <div className="aspect-square bg-gray-100 overflow-hidden">
+        {p.imagePath ? (
+          <img
+            src={`/products/${p.id}/image?v=${p.updatedAt}`}
+            alt={p.name}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-gray-300 text-4xl select-none">
+            ☐
+          </div>
+        )}
+      </div>
+      <div className="p-3 flex items-start justify-between gap-1">
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <p className="text-sm font-semibold text-gray-800 truncate m-0">{p.name}</p>
+          <p className="text-sm text-indigo-600 font-bold m-0">${p.price.toFixed(2)}</p>
+        </div>
+        {isManager && (
+          <div onClick={e => e.stopPropagation()}>
+            <ActionsMenu id={p.id} onDeleteRequest={onDeleteRequest} />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ProductDetailModal({ product, onClose }: { product: Product; onClose: () => void }) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Image */}
+        <div className="bg-gray-100">
+          {product.imagePath ? (
+            <img
+              src={`/products/${product.id}/image?v=${product.updatedAt}`}
+              alt={product.name}
+              className="w-full max-h-80 object-contain"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-200 text-7xl select-none">
+              ☐
+            </div>
+          )}
+        </div>
+
+        {/* Details */}
+        <div className="p-6 flex flex-col gap-4">
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="text-xl font-bold text-gray-900 m-0">{product.name}</h2>
+            <span className="text-xl font-bold text-indigo-600 whitespace-nowrap">${product.price.toFixed(2)}</span>
+          </div>
+
+          {product.description && (
+            <p className="text-sm text-gray-600 m-0 leading-relaxed whitespace-pre-wrap">{product.description}</p>
+          )}
+
+          <div className="flex flex-col gap-1 pt-2 border-t border-gray-100 text-xs text-gray-400">
+            <span>Added {new Date(product.createdAt).toLocaleDateString()}</span>
+            {product.updatedAt !== product.createdAt && (
+              <span>Updated {new Date(product.updatedAt).toLocaleDateString()}</span>
+            )}
+          </div>
+
+          <Button variant="secondary" className="w-full" onClick={onClose}>Close</Button>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -64,6 +167,7 @@ export default function ProductList() {
   const { data: products = [], isLoading, error } = useProducts()
   const deleteProduct = useDeleteProduct()
   const { sortKey, sortDir, deleteId, handleSort, setDeleteId } = useProductListStore()
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
 
   async function confirmDelete() {
     if (!deleteId) return
@@ -78,64 +182,39 @@ export default function ProductList() {
 
   return (
     <>
-      <div className="max-w-4xl">
-        <div className="flex items-center justify-between mb-6">
+      <div>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <h1 className="text-2xl font-semibold m-0">Products</h1>
-          {isManager && (
-            <Button onClick={() => navigate('/products/new')}>+ Add Product</Button>
-          )}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-400 font-medium">Sort:</span>
+              <SortButton label="Price"  active={sortKey === 'price'}     dir={sortDir} onClick={() => handleSort('price')} />
+              <SortButton label="Newest" active={sortKey === 'createdAt'} dir={sortDir} onClick={() => handleSort('createdAt')} />
+            </div>
+            {isManager && <Button onClick={() => navigate('/products/new')}>+ Add Product</Button>}
+          </div>
         </div>
+
         {sorted.length === 0 ? (
           <p className="p-8 text-center text-gray-500">No products found.</p>
         ) : (
-          <div className="overflow-hidden rounded-lg shadow-sm">
-            <table className="w-full border-collapse">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="px-4 py-3 text-left align-middle text-xs uppercase tracking-wider text-gray-500 font-semibold border-b border-gray-200">Image</th>
-                  <th className="px-4 py-3 text-left align-middle text-xs uppercase tracking-wider text-gray-500 font-semibold border-b border-gray-200">Name</th>
-                  <th className="px-4 py-3 text-left align-middle text-xs uppercase tracking-wider text-gray-500 font-semibold border-b border-gray-200">Description</th>
-                  <th
-                    className="px-4 py-3 text-left align-middle text-xs uppercase tracking-wider text-gray-500 font-semibold border-b border-gray-200 cursor-pointer select-none whitespace-nowrap hover:text-gray-800"
-                    onClick={() => handleSort('price')}
-                  >
-                    Price <SortIcon active={sortKey === 'price'} dir={sortDir} />
-                  </th>
-                  <th
-                    className="px-4 py-3 text-left align-middle text-xs uppercase tracking-wider text-gray-500 font-semibold border-b border-gray-200 cursor-pointer select-none whitespace-nowrap hover:text-gray-800"
-                    onClick={() => handleSort('createdAt')}
-                  >
-                    Created <SortIcon active={sortKey === 'createdAt'} dir={sortDir} />
-                  </th>
-                  {isManager && <th className="px-4 py-3 border-b border-gray-200"></th>}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {sorted.map((p) => (
-                  <tr key={p.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 align-middle">
-                      {p.imagePath ? (
-                        <img src={`/products/${p.id}/image`} alt={p.name} className="block w-10 h-10 object-cover rounded" />
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 align-middle">{p.name}</td>
-                    <td className="px-4 py-3 align-middle">{p.description}</td>
-                    <td className="px-4 py-3 align-middle">${p.price.toFixed(2)}</td>
-                    <td className="px-4 py-3 align-middle">{new Date(p.createdAt).toLocaleDateString()}</td>
-                    {isManager && (
-                      <td className="px-4 py-3 align-middle w-10 text-right">
-                        <ActionsMenu id={p.id} onDeleteRequest={setDeleteId} />
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {sorted.map((p) => (
+              <ProductCard
+                key={p.id}
+                p={p}
+                isManager={isManager}
+                onDeleteRequest={setDeleteId}
+                onClick={() => setSelectedProduct(p)}
+              />
+            ))}
           </div>
         )}
       </div>
+
+      {selectedProduct && (
+        <ProductDetailModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
+      )}
 
       <AlertDialog.Root open={deleteId !== null} onOpenChange={(open) => { if (!open) setDeleteId(null) }}>
         <AlertDialog.Portal>

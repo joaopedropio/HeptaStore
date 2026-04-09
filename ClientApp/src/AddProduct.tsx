@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCreateProduct } from './queries'
-import { Button, ErrorBanner, Field, Input, Textarea } from './ui'
+import { Button, ErrorBanner, Field, ImagePicker, Input, Textarea } from './ui'
 
 interface FormState {
   name: string
@@ -59,8 +59,8 @@ export default function AddProduct() {
         </Field>
 
         <Field label="Image (optional)" htmlFor="image">
-          <input id="image" name="image" type="file" accept=".jpg,.jpeg,.png" onChange={handleImageChange} className="text-sm text-gray-600" />
-          {preview && <img src={preview} alt="Preview" className="mt-2 w-30 h-30 object-cover rounded-md border border-gray-200" />}
+          <ImagePicker id="image" accept=".jpg,.jpeg,.png" fileName={image?.name ?? null} onChange={handleImageChange} />
+          {preview && <img src={preview} alt="Preview" className="w-30 h-30 object-cover rounded-md border border-gray-200" />}
         </Field>
 
         <div className="flex justify-end gap-3 pt-1">
