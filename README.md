@@ -2,6 +2,8 @@
 
 A product management REST API with a React frontend. Supports creating, listing, updating, and deleting products, including image uploads.
 
+**Live demo:** http://144.126.223.14:8080/
+
 ![Dashboard](dashboard.png)
 
 ## Technologies
